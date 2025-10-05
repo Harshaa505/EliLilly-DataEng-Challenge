@@ -66,7 +66,7 @@ WHERE t1.goals_scored = (
             g2.scorer,
             COUNT(*) AS goals_scored
         FROM goalscorers g2
-        JOIN results r2 ON g2.date = r2.date --
+        JOIN results r2 ON g2.date = r2.date 
                        AND g2.home_team = r2.home_team 
                        AND g2.away_team = r2.away_team
         WHERE g2.scorer IS NOT NULL
