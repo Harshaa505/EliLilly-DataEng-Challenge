@@ -1,1 +1,77 @@
 
+--Q1
+
+SELECT ROUND(AVG(home_score + away_score), 2) AS avg_goals_per_game
+FROM results
+WHERE strftime('%Y', date) BETWEEN '1900' AND '2000'; --strftime and %Y extracts only the year and not the exact dates 
+
+--Q2
+
+SELECT
+    winner AS country,--lists names of countries that won
+    COUNT(*)AS shooutout_wins-- displays number of wins in the shootouts_wins column
+FROM shootouts
+GROUP BY winner--gathers one or more of same row into one
+ORDER BY winner ASC;-- ascending order 
+
+--Q3
+SELECT * 
+FROM results r 
+LEFT JOIN goalscorers g ON r.date=g.date AND r.home_team=g.home_team AND r.away_team=g.away_team --these are the reliable keys 
+LEFT JOIN shootouts s ON r.date=s.date AND r.home_team=s.home_team AND r.away_team=s.away_team 
+
+--Q4
+
+SELECT r.date,r.home_team,r.away_team, s.winner AS shootout_winners --shows what team won against who in 1-1 shootout
+FROM results r 
+JOIN shootouts s ON r.date=s.date AND r.home_team=s.home_team AND r.away_team=s.away_team 
+WHERE r.home_score=1 AND r.away_score=1 AND s.winner IS NOT NULL
+GROUP BY s.winner;
+--Q5
+WITH tournament_totals AS (
+    SELECT 
+        r.tournament,
+        COUNT(*) AS total_goals-- calculates total goals per tournament
+    FROM goalscorers g
+    JOIN results r ON g.date = r.date 
+                   AND g.home_team = r.home_team 
+                   AND g.away_team = r.away_team
+    WHERE g.scorer IS NOT NULL
+    GROUP BY r.tournament
+)
+
+SELECT 
+    t1.tournament,
+    t1.scorer AS top_scorer,
+    t1.goals_scored,
+    ROUND((t1.goals_scored * 100.0 / tt.total_goals), 2) AS percentage_of_tournament_goals --Percentage calculation 
+FROM (
+    SELECT --gets scorers per tournament
+        r.tournament,
+        g.scorer,
+        COUNT(*) AS goals_scored
+    FROM goalscorers g
+    JOIN results r ON g.date = r.date 
+                   AND g.home_team = r.home_team 
+                   AND g.away_team = r.away_team
+    WHERE g.scorer IS NOT NULL
+    GROUP BY r.tournament, g.scorer
+) AS t1
+JOIN tournament_totals tt ON t1.tournament = tt.tournament --Joins with the total goals per tournament to calculate percentages
+WHERE t1.goals_scored = (
+    SELECT MAX(t2.goals_scored)--gets the top scorer per tournament 
+    FROM (
+        SELECT 
+            r2.tournament,
+            g2.scorer,
+            COUNT(*) AS goals_scored
+        FROM goalscorers g2
+        JOIN results r2 ON g2.date = r2.date --
+                       AND g2.home_team = r2.home_team 
+                       AND g2.away_team = r2.away_team
+        WHERE g2.scorer IS NOT NULL
+        GROUP BY r2.tournament, g2.scorer
+    ) AS t2
+    WHERE t2.tournament = t1.tournament
+)
+ORDER BY t1.goals_scored DESC;--ordered by highest goals scored
